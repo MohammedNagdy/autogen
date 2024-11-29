@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // OpenAIMessageTests.cs
 
 using System;
@@ -276,14 +276,17 @@ public class OpenAIMessageTests
                 var innerMessage = msgs.Last();
                 innerMessage!.Should().BeOfType<MessageEnvelope<ChatMessage>>();
                 var chatRequestMessage = (AssistantChatMessage)((MessageEnvelope<ChatMessage>)innerMessage!).Content;
-                chatRequestMessage.ParticipantName.Should().Be("assistant");
+                // when the message is a tool call message
+                // the name field should not be set
+                // please visit OpenAIChatRequestMessageConnector class for more information
+                chatRequestMessage.ParticipantName.Should().BeNullOrEmpty();
                 chatRequestMessage.ToolCalls.Count().Should().Be(1);
                 chatRequestMessage.Content.First().Text.Should().Be("textContent");
                 chatRequestMessage.ToolCalls.First().Should().BeOfType<ChatToolCall>();
                 var functionToolCall = (ChatToolCall)chatRequestMessage.ToolCalls.First();
                 functionToolCall.FunctionName.Should().Be("test");
                 functionToolCall.Id.Should().Be("test");
-                functionToolCall.FunctionArguments.Should().Be("test");
+                functionToolCall.FunctionArguments.ToString().Should().Be("test");
                 return await innerAgent.GenerateReplyAsync(msgs);
             })
             .RegisterMiddleware(middleware);
@@ -307,7 +310,10 @@ public class OpenAIMessageTests
                 innerMessage!.Should().BeOfType<MessageEnvelope<ChatMessage>>();
                 var chatRequestMessage = (AssistantChatMessage)((MessageEnvelope<ChatMessage>)innerMessage!).Content;
                 chatRequestMessage.Content.Should().BeNullOrEmpty();
-                chatRequestMessage.ParticipantName.Should().Be("assistant");
+                // when the message is a tool call message
+                // the name field should not be set
+                // please visit OpenAIChatRequestMessageConnector class for more information
+                chatRequestMessage.ParticipantName.Should().BeNullOrEmpty();
                 chatRequestMessage.ToolCalls.Count().Should().Be(2);
                 for (int i = 0; i < chatRequestMessage.ToolCalls.Count(); i++)
                 {
@@ -315,7 +321,7 @@ public class OpenAIMessageTests
                     var functionToolCall = (ChatToolCall)chatRequestMessage.ToolCalls.ElementAt(i);
                     functionToolCall.FunctionName.Should().Be("test");
                     functionToolCall.Id.Should().Be($"test_{i}");
-                    functionToolCall.FunctionArguments.Should().Be("test");
+                    functionToolCall.FunctionArguments.ToString().Should().Be("test");
                 }
                 return await innerAgent.GenerateReplyAsync(msgs);
             })
@@ -443,7 +449,7 @@ public class OpenAIMessageTests
                 var functionToolCall = (ChatToolCall)toolCallRequestMessage.ToolCalls.First();
                 functionToolCall.FunctionName.Should().Be("test");
                 functionToolCall.Id.Should().Be("test");
-                functionToolCall.FunctionArguments.Should().Be("test");
+                functionToolCall.FunctionArguments.ToString().Should().Be("test");
                 return await innerAgent.GenerateReplyAsync(msgs);
             })
             .RegisterMiddleware(middleware);
@@ -475,7 +481,7 @@ public class OpenAIMessageTests
                     var functionToolCall = (ChatToolCall)toolCallRequestMessage.ToolCalls.ElementAt(i);
                     functionToolCall.FunctionName.Should().Be("test");
                     functionToolCall.Id.Should().Be($"test_{i}");
-                    functionToolCall.FunctionArguments.Should().Be("test");
+                    functionToolCall.FunctionArguments.ToString().Should().Be("test");
                 }
 
                 for (int i = 1; i < msgs.Count(); i++)
@@ -624,8 +630,6 @@ public class OpenAIMessageTests
                                 _ => throw new System.NotImplementedException(),
                             };
                         }),
-                        FunctionCallName = assistantMessage.FunctionCall?.FunctionName,
-                        FunctionCallArguments = assistantMessage.FunctionCall?.FunctionArguments,
                     };
                 }
 

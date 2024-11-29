@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // OpenAIChatAgent.cs
 
 using System;
@@ -34,7 +34,7 @@ public class OpenAIChatAgent : IStreamingAgent
 {
     private readonly ChatClient chatClient;
     private readonly ChatCompletionOptions options;
-    private readonly string systemMessage;
+    private readonly string? systemMessage;
 
     /// <summary>
     /// Create a new instance of <see cref="OpenAIChatAgent"/>.
@@ -44,15 +44,15 @@ public class OpenAIChatAgent : IStreamingAgent
     /// <param name="systemMessage">system message</param>
     /// <param name="temperature">temperature</param>
     /// <param name="maxTokens">max tokens to generated</param>
-    /// <param name="responseFormat">response format, set it to <see cref="ChatResponseFormat.JsonObject"/> to enable json mode.</param>
+    /// <param name="responseFormat">response format, set it to <see cref="ChatResponseFormat"/> to enable json mode.</param>
     /// <param name="seed">seed to use, set it to enable deterministic output</param>
     /// <param name="functions">functions</param>
     public OpenAIChatAgent(
         ChatClient chatClient,
         string name,
-        string systemMessage = "You are a helpful AI assistant",
-        float temperature = 0.7f,
-        int maxTokens = 1024,
+        string? systemMessage = "You are a helpful AI assistant",
+        float? temperature = null,
+        int? maxTokens = null,
         int? seed = null,
         ChatResponseFormat? responseFormat = null,
         IEnumerable<ChatTool>? functions = null)
@@ -75,7 +75,7 @@ public class OpenAIChatAgent : IStreamingAgent
         ChatClient chatClient,
         string name,
         ChatCompletionOptions options,
-        string systemMessage = "You are a helpful AI assistant")
+        string? systemMessage = "You are a helpful AI assistant")
     {
         this.chatClient = chatClient;
         this.Name = name;
@@ -124,7 +124,7 @@ public class OpenAIChatAgent : IStreamingAgent
         });
 
         // add system message if there's no system message in messages
-        if (!oaiMessages.Any(m => m is SystemChatMessage))
+        if (!oaiMessages.Any(m => m is SystemChatMessage) && systemMessage is not null)
         {
             oaiMessages = new[] { new SystemChatMessage(systemMessage) }.Concat(oaiMessages);
         }
@@ -138,12 +138,11 @@ public class OpenAIChatAgent : IStreamingAgent
         {
             Seed = this.options.Seed,
             Temperature = options?.Temperature ?? this.options.Temperature,
-            MaxTokens = options?.MaxToken ?? this.options.MaxTokens,
+            MaxOutputTokenCount = options?.MaxToken ?? this.options.MaxOutputTokenCount,
             ResponseFormat = this.options.ResponseFormat,
             FrequencyPenalty = this.options.FrequencyPenalty,
-            FunctionChoice = this.options.FunctionChoice,
             IncludeLogProbabilities = this.options.IncludeLogProbabilities,
-            ParallelToolCallsEnabled = this.options.ParallelToolCallsEnabled,
+            AllowParallelToolCalls = this.options.AllowParallelToolCalls,
             PresencePenalty = this.options.PresencePenalty,
             ToolChoice = this.options.ToolChoice,
             TopLogProbabilityCount = this.options.TopLogProbabilityCount,
@@ -183,17 +182,17 @@ public class OpenAIChatAgent : IStreamingAgent
         if (options?.OutputSchema is not null)
         {
             option.ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
-                name: options.OutputSchema.GetTitle() ?? throw new ArgumentException("Output schema must have a title"),
+                jsonSchemaFormatName: options.OutputSchema.GetTitle() ?? throw new ArgumentException("Output schema must have a title"),
                 jsonSchema: BinaryData.FromObjectAsJson(options.OutputSchema),
-                description: options.OutputSchema.GetDescription());
+                jsonSchemaFormatDescription: options.OutputSchema.GetDescription());
         }
 
         return option;
     }
 
     private static ChatCompletionOptions CreateChatCompletionOptions(
-        float temperature = 0.7f,
-        int maxTokens = 1024,
+        float? temperature = 0.7f,
+        int? maxTokens = 1024,
         int? seed = null,
         ChatResponseFormat? responseFormat = null,
         IEnumerable<ChatTool>? functions = null)
@@ -201,7 +200,7 @@ public class OpenAIChatAgent : IStreamingAgent
         var options = new ChatCompletionOptions
         {
             Temperature = temperature,
-            MaxTokens = maxTokens,
+            MaxOutputTokenCount = maxTokens,
             Seed = seed,
             ResponseFormat = responseFormat,
         };
